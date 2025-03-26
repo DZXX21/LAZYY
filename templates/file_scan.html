@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LazyHunter Web - Dosya ile Tarama</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f4f7f9; }
+    .hero {
+      background: url('https://source.unsplash.com/1600x400/?cyberattack') no-repeat center center;
+      background-size: cover;
+      padding: 60px 0;
+      color: #fff;
+      text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+    }
+    .hero h1 { font-weight: 700; }
+    .card { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .nav-link { color: #fff !important; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">LazyHunter Web</a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="/">Tek IP Tarama</a></li>
+          <li class="nav-item"><a class="nav-link" href="/file">Dosya ile Tarama</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Banner -->
+  <div class="hero text-center">
+    <div class="container">
+      <h1>Dosya ile IP Tarama</h1>
+      <p>IP listesi içeren dosyanızı yükleyin, toplu analiz sonuçlarına ulaşın</p>
+    </div>
+  </div>
+
+  <div class="container my-4">
+    <div class="card p-4">
+      <h5 class="card-title">Dosya ile Tarama</h5>
+      <form id="fileForm" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="fileInput" class="form-label">IP Listesi Dosyası</label>
+          <input type="file" class="form-control" id="fileInput" name="file" required>
+        </div>
+        <div class="mb-3">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="show_ports" id="file_show_ports">
+            <label class="form-check-label" for="file_show_ports">Açık Portlar</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="show_cves" id="file_show_cves">
+            <label class="form-check-label" for="file_show_cves">CVE'ler</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="show_hosts" id="file_show_hosts">
+            <label class="form-check-label" for="file_show_hosts">Host Adları</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="show_cve_ports" id="file_show_cve_ports">
+            <label class="form-check-label" for="file_show_cve_ports">CVE+Port</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Dosya Yükle ve Tara</button>
+      </form>
+    </div>
+
+    <!-- Sonuçların Görüntüleneceği Alan -->
+    <div id="results" class="mt-4"></div>
+  </div>
+
+  <!-- Bootstrap JS & jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    $(document).ready(function(){
+      $("#fileForm").submit(function(e){
+        e.preventDefault();
+        var formData = new FormData(this);
+        $.ajax({
+          url: "/scan_file",
+          type: "POST",
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function(data){
+            $("#results").empty();
+            data.forEach(function(result){
+              displayResults(result);
+            });
+          },
+          error: function(xhr){
+            alert("Hata: " + xhr.responseJSON.error);
+          }
+        });
+      });
+
+      function displayResults(data){
+        var card = $("<div class='card p-3 mb-4'></div>");
+        card.append("<h5 class='card-title'>IP: " + data.ip + "</h5>");
+        
+        if(data.ports && data.ports.length > 0){
+          card.append("<p><strong>Açık Portlar:</strong> " + data.ports.join(", ") + "</p>");
+        }
+        if(data.hostnames && data.hostnames.length > 0){
+          card.append("<p><strong>Host Adları:</strong> " + data.hostnames.join(", ") + "</p>");
+        }
+        if(data.cves && data.cves.length > 0){
+          var cveHtml = "<p><strong>CVE'ler:</strong></p>";
+          data.cves.forEach(function (cve) {
+            var severityClass = "";
+            switch(cve.severity) {
+              case "critical": severityClass = "text-danger fw-bold"; break;
+              case "high": severityClass = "text-warning fw-bold"; break;
+              case "medium": severityClass = "text-info fw-bold"; break;
+              default: severityClass = "text-success fw-bold";
+            }
+            cveHtml += "<div class='mb-2 border rounded p-2'>" +
+                       "<span class='" + severityClass + "'>" + cve.id + " (" + cve.cvss_v3 + ")</span><br>" +
+                       "<small>" + cve.description + "</small>" +
+                       "</div>";
+          });
+          card.append(cveHtml);
+        } else {
+          card.append("<p>CVE bulunamadı.</p>");
+        }
+        $("#results").append(card);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON Düzenleyici</title>
+</head>
+<body>
+    <h1>JSON Dosyası Düzenleyici</h1>
+    <input type="file" id="fileInput" accept=".json">
+    <button id="processButton">Düzenle ve Kaydet</button>
+
+    <script>
+      document.getElementById('processButton').addEventListener('click', function(){
+          const fileInput = document.getElementById('fileInput');
+          if (fileInput.files.length === 0) {
+              alert('Lütfen bir JSON dosyası seçin.');
+              return;
+          }
+          const file = fileInput.files[0];
+          const reader = new FileReader();
+
+          reader.onload = function(e) {
+              try {
+                  // JSON verisini oku
+                  let jsonData = JSON.parse(e.target.result);
+
+                  // Eğer veriniz bir liste (dizi) ise her kayıtta kontrol et, yoksa nesne üzerinde işlem yap
+                  if(Array.isArray(jsonData)){
+                    jsonData = jsonData.map(item => {
+                      if(item["Unnamed_Column_0"] === ""){
+                         delete item["Unnamed_Column_0"];
+                      }
+                      return item;
+                    });
+                  } else {
+                      if(jsonData["Unnamed_Column_0"] === ""){
+                          delete jsonData["Unnamed_Column_0"];
+                      }
+                  }
+
+                  // Düzenlenmiş veriyi okunabilir biçime getir (indent=4)
+                  const jsonString = JSON.stringify(jsonData, null, 4);
+                  
+                  // Blob oluştur ve "cikti.json" olarak indirme işlemi başlat
+                  const blob = new Blob([jsonString], {type: "application/json"});
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = "cikti.json";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+              } catch(error) {
+                  alert("Dosya işlenirken hata oluştu: " + error);
+              }
+          };
+
+          reader.readAsText(file);
+      });
+    </script>
+</body>
+</html>

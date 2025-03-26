@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NACE & Hizmet Hesaplamaları</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    }
+    .card {
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+      transition: transform 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .badge-risk {
+      font-size: 0.9rem;
+      padding: 0.5em 0.75em;
+      border-radius: 0.5rem;
+    }
+    .badge-az {
+      background-color: #198754; /* Yeşil */
+      color: #fff;
+    }
+    .badge-tehlike {
+      background-color: #ffc107; /* Sarı */
+      color: #212529;
+    }
+    .badge-cok {
+      background-color: #dc3545; /* Kırmızı */
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    
+    <!-- NACE Kodu Sorgulama Bölümü -->
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-7">
+        <div class="card shadow-lg">
+          <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="bi bi-building me-2"></i> İşyeri NACE Kodu Sorgulama</h4>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="naceInput" class="form-label fw-bold">NACE Kodu Girin</label>
+              <input type="text" id="naceInput" class="form-control" placeholder="Örnek: 01.29">
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-primary btn-lg" onclick="gosterNaceKod()">
+                <i class="bi bi-search me-1"></i> Kayıdı Göster
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- NACE Sonuç Kartı -->
+        <div class="card shadow-lg" id="naceCard" style="display:none;">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i> NACE Kodu Bilgisi</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>NACE Kodu</th>
+                    <th>Faaliyet Açıklaması</th>
+                    <th>EK-1</th>
+                  </tr>
+                </thead>
+                <tbody id="naceSonuc"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Hizmet Hesaplama Bölümü -->
+    <div class="row justify-content-center mt-4">
+      <div class="col-md-8 col-lg-7">
+        <div class="card shadow-lg">
+          <div class="card-header bg-success text-white">
+            <h4 class="mb-0" id="hizmetBaslik"><i class="bi bi-calculator me-2"></i> Hizmet Hesaplama Sonuçları</h4>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="calisanSayisi" class="form-label fw-bold">Çalışan Sayısını Girin:</label>
+              <input type="number" id="calisanSayisi" class="form-control" placeholder="Örnek: 750" value="750" oninput="hesaplaHizmet()">
+            </div>
+            <div class="mb-3">
+              <label for="hizmetTuru" class="form-label fw-bold">Hizmet Türü Seçiniz:</label>
+              <select id="hizmetTuru" class="form-select" onchange="hesaplaHizmet()">
+                <option value="isGuvenligiUzmani">İş Güvenliği Uzmanı</option>
+                <option value="isyeriHekimi">İşyeri Hekimi</option>
+                <option value="dsp">Diğer Sağlık Personeli (DSP)</option>
+              </select>
+            </div>
+            <div class="card shadow" id="hizmetCard">
+              <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0" id="hizmetBaslikIc"><i class="bi bi-list-ul me-2"></i> Sonuçlar</h5>
+              </div>
+              <div class="card-body">
+                <div id="hizmetSonuc"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    let jsonData = [];
+    // cikti.json dosyasından veriyi çekiyoruz.
+    window.onload = function() {
+      fetch("cikti.json")
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("HTTP hata kodu: " + response.status);
+          }
+          return response.json();
+        })
+        .then(data => {
+          jsonData = data;
+        })
+        .catch(error => {
+          console.error("Veri çekilemedi:", error);
+        });
+    };
+
+    // EK-1 alanındaki risk değerlerini renklendiren fonksiyon
+    function getRiskBadge(risk) {
+      if (risk === "Az Tehlikeli") {
+        return `<span class="badge badge-risk badge-az"><i class="bi bi-check-circle-fill me-1"></i>${risk}</span>`;
+      } else if (risk === "Tehlikeli") {
+        return `<span class="badge badge-risk badge-tehlike"><i class="bi bi-exclamation-circle-fill me-1"></i>${risk}</span>`;
+      } else if (risk === "Çok Tehlikeli") {
+        return `<span class="badge badge-risk badge-cok"><i class="bi bi-exclamation-triangle-fill me-1"></i>${risk}</span>`;
+      } else {
+        return `<span class="badge badge-risk">${risk}</span>`;
+      }
+    }
+
+    // NACE Kodu Sorgulama İşlemi
+    function gosterNaceKod() {
+      const girilenKod = document.getElementById("naceInput").value.trim();
+      const naceSonucBody = document.getElementById("naceSonuc");
+      const naceCard = document.getElementById("naceCard");
+      naceSonucBody.innerHTML = "";
+
+      if (!girilenKod) {
+        alert("Lütfen bir NACE kodu girin!");
+        return;
+      }
+
+      const sonucObjesi = jsonData.find(item => item.Unnamed_Column_1 === girilenKod);
+      if (!sonucObjesi) {
+        alert("Bu NACE koduna ait kayıt bulunamadı!");
+        naceCard.style.display = "none";
+        return;
+      }
+
+      const ek1 = (sonucObjesi["EK-1"] && sonucObjesi["EK-1"].trim() !== "") 
+                    ? getRiskBadge(sonucObjesi["EK-1"].trim()) 
+                    : getRiskBadge("Az Tehlikeli");
+      const row = `<tr>
+                      <td>${sonucObjesi.Unnamed_Column_1}</td>
+                      <td>${sonucObjesi.Unnamed_Column_2}</td>
+                      <td>${ek1}</td>
+                   </tr>`;
+      naceSonucBody.innerHTML = row;
+      naceCard.style.display = "block";
+
+      // Hizmet hesaplaması bölümünü güncelle
+      hesaplaHizmet();
+    }
+
+    // Hizmet Hesaplama Fonksiyonu (Üç hizmet türü için)
+    function hesaplaHizmet() {
+      const calisanSayisi = parseInt(document.getElementById("calisanSayisi").value);
+      const hizmetTuru = document.getElementById("hizmetTuru").value;
+      let outputHTML = "";
+      
+      if (hizmetTuru === "isGuvenligiUzmani") {
+        // İş Güvenliği Uzmanı Hesaplaması
+        // ≥ 1000 → Az Tehlikeli: 10 dk/ay, 1000 çalışan
+        // 500–999 → Tehlikeli: 20 dk/ay, 500 çalışan
+        // < 500 → Çok Tehlikeli: 40 dk/ay, 250 çalışan
+        let risk, dakika, threshold;
+        if (calisanSayisi >= 1000) {
+          risk = "Az Tehlikeli";
+          dakika = 10;
+          threshold = 1000;
+        } else if (calisanSayisi >= 500) {
+          risk = "Tehlikeli";
+          dakika = 20;
+          threshold = 500;
+        } else {
+          risk = "Çok Tehlikeli";
+          dakika = 40;
+          threshold = 250;
+        }
+        const toplamSure = calisanSayisi * dakika;
+        const uzmanAdedi = Math.ceil(calisanSayisi / threshold);
+        outputHTML = `
+          <table class="table table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Hizmet Türü</th>
+                <th>Risk</th>
+                <th>Çalışan Başına Süre</th>
+                <th>Toplam Süre (dk/ay)</th>
+                <th>Gereken Uzman Sayısı</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="bi bi-shield-lock-fill me-1"></i> İş Güvenliği Uzmanı</td>
+                <td>${getRiskBadge(risk)}</td>
+                <td>${dakika} dk/ay</td>
+                <td>${toplamSure} dk/ay</td>
+                <td>${uzmanAdedi}</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+        document.getElementById("hizmetBaslikIc").innerText = "İş Güvenliği Uzmanı Hesaplama Sonuçları";
+      } else if (hizmetTuru === "isyeriHekimi") {
+        // İşyeri Hekimi Hesaplaması
+        // 0–750 → Çok Tehlikeli: 15 dk/ay, 750 çalışan
+        // 751–1000 → Tehlikeli: 10 dk/ay, 1000 çalışan
+        // ≥ 1001 → Az Tehlikeli: 5 dk/ay, 2000 çalışan
+        let risk, dakika, threshold;
+        if (calisanSayisi <= 750) {
+          risk = "Çok Tehlikeli";
+          dakika = 15;
+          threshold = 750;
+        } else if (calisanSayisi <= 1000) {
+          risk = "Tehlikeli";
+          dakika = 10;
+          threshold = 1000;
+        } else {
+          risk = "Az Tehlikeli";
+          dakika = 5;
+          threshold = 2000;
+        }
+        const toplamSure = calisanSayisi * dakika;
+        const hekimAdedi = Math.ceil(calisanSayisi / threshold);
+        outputHTML = `
+          <table class="table table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Hizmet Türü</th>
+                <th>Risk</th>
+                <th>Çalışan Başına Süre</th>
+                <th>Toplam Süre (dk/ay)</th>
+                <th>Gereken Hekim Sayısı</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="bi bi-heart-pulse-fill me-1"></i> İşyeri Hekimi</td>
+                <td>${getRiskBadge(risk)}</td>
+                <td>${dakika} dk/ay</td>
+                <td>${toplamSure} dk/ay</td>
+                <td>${hekimAdedi}</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+        document.getElementById("hizmetBaslikIc").innerText = "İşyeri Hekimi Hesaplama Sonuçları";
+      } else if (hizmetTuru === "dsp") {
+        // DSP Hesaplaması
+        if (calisanSayisi < 10) {
+          outputHTML = `<div class="alert alert-info"><i class="bi bi-exclamation-triangle-fill me-1"></i>10'dan az çalışan varsa DSP gerekli değildir.</div>`;
+        } else {
+          let dakika;
+          if (calisanSayisi >= 10 && calisanSayisi <= 49) {
+            dakika = 10;
+          } else if (calisanSayisi >= 50 && calisanSayisi <= 249) {
+            dakika = 15;
+          } else {
+            dakika = 20;
+          }
+          const toplamSure = calisanSayisi * dakika;
+          outputHTML = `
+            <table class="table table-bordered table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Hizmet Türü</th>
+                  <th>Çalışan Başına Süre</th>
+                  <th>Toplam Süre (dk/ay)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><i class="bi bi-people-fill me-1"></i> DSP</td>
+                  <td>${dakika} dk/ay</td>
+                  <td>${toplamSure} dk/ay</td>
+                </tr>
+              </tbody>
+            </table>
+          `;
+          document.getElementById("hizmetBaslikIc").innerText = "Diğer Sağlık Personeli (DSP) Hesaplama Sonuçları";
+        }
+      }
+      document.getElementById("hizmetSonuc").innerHTML = outputHTML;
+    }
+  </script>
+</body>
+</html>

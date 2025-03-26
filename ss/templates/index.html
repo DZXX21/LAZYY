@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LazyHunter Web Scanner</title>
+</head>
+<body>
+  <h1>LazyHunter Web Scanner</h1>
+  <form id="scanForm">
+    <label for="ip">IP address:</label>
+    <input type="text" id="ip" name="ip" value="78.135.116.154" />
+    <br/><br/>
+
+    <label for="cves">Show CVEs</label>
+    <input type="checkbox" id="cves" name="cves" value="true" />
+    <br/>
+
+    <label for="ports">Show Ports</label>
+    <input type="checkbox" id="ports" name="ports" value="true" />
+    <br/>
+
+    <label for="host">Show Hostnames</label>
+    <input type="checkbox" id="host" name="host" value="true" />
+    <br/>
+
+    <label for="cve_ports">Show CVEs + Ports</label>
+    <input type="checkbox" id="cve_ports" name="cve_ports" value="true" />
+    <br/>
+
+    <label for="fast">Hızlı Tarama</label>
+    <input type="checkbox" id="fast" name="fast" value="true" />
+    <br/><br/>
+
+    <button type="submit">Scan</button>
+  </form>
+
+  <h2>Results:</h2>
+  <pre id="results"></pre>
+
+  <script>
+    const form = document.getElementById('scanForm');
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      let ip         = document.getElementById('ip').value;
+      let cves       = document.getElementById('cves').checked;
+      let ports      = document.getElementById('ports').checked;
+      let host       = document.getElementById('host').checked;
+      let cve_ports  = document.getElementById('cve_ports').checked;
+      let fast       = document.getElementById('fast').checked;
+
+      let query = '/scan?ip=' + encodeURIComponent(ip);
+      if (cves)      query += '&cves=true';
+      if (ports)     query += '&ports=true';
+      if (host)      query += '&host=true';
+      if (cve_ports) query += '&cve_ports=true';
+      if (fast)      query += '&fast=true';
+
+      try {
+        let resp = await fetch(query);
+        if (!resp.ok) throw new Error('HTTP error ' + resp.status);
+        let data = await resp.json();
+        document.getElementById('results').textContent = data.lines.join('\n');
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error);
+      }
+    });
+  </script>
+</body>
+</html>
